@@ -9,26 +9,52 @@ public class Move extends Chess{
     private String uci;
     private Piece piece;
 
+    private int enPassantSquare = -1;
+
     private int castle = 0;
 
 
     public Move(int fromSquare, int toSquare, Piece capture, Piece piece){
-        this.fromSquare = fromSquare;
-        this.toSquare = toSquare;
+        initMove(fromSquare, toSquare);
         this.capture = capture;
         this.uci = coords[fromSquare] + coords[toSquare];
         this.piece = piece;
     }
 
     public Move(int fromSquare, int toSquare, int castle, Piece piece){
-        this.fromSquare = fromSquare;
-        this.toSquare = toSquare;
+        initMove(fromSquare, toSquare);
         this.castle = castle;
         this.uci = castle == 1 ? "O-O":"O-O-O";
         this.piece = piece;
     }
 
+
+    public Move(int fromSquare, int toSquare, Piece capture, Piece piece, int enPassantSquare){
+        initMove(fromSquare, toSquare);
+        this.capture = capture;
+        this.uci = coords[fromSquare] + coords[toSquare];
+        this.piece = piece;
+        this.enPassantSquare = enPassantSquare;
+    }
+
+    private void initMove(int fromSquare, int toSquare){
+        this.fromSquare = fromSquare;
+        this.toSquare = toSquare;
+    }
+
+
     
+    public int getEnPassantSquare() {
+        return enPassantSquare;
+    }
+
+    public void setEnPassantSquare(int enPassantSquare) {
+        this.enPassantSquare = enPassantSquare;
+    }
+
+    public boolean isEnPassant(){
+        return enPassantSquare != -1;
+    }
 
     public int getFromSquare() {
         return fromSquare;
@@ -73,13 +99,7 @@ public class Move extends Chess{
         return coords[toSquare];
     }
 
-
     public String toString(){
         return uci;
     }
-
-    
-
-
-
 }

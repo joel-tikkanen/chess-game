@@ -4,8 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Stack;
 
-import com.chessgame.chess.Chess.Color;
-import com.chessgame.chess.Chess.Pieces;
+
 
 public class Board extends Chess {
 
@@ -70,7 +69,6 @@ public class Board extends Chess {
     private boolean blackDraw = false;
 
 
-    private int enPassant;
 
 
     public Board(){
@@ -461,6 +459,7 @@ public class Board extends Chess {
         allPositions.add(fen);
         board[move.getFromSquare()] = null;
         board[move.getToSquare()] = moving;
+        if (move.isEnPassant()) board[move.getEnPassantSquare()] = null;
         playedMoves.push(move);
         if (move.getCapture() != null || move.getPiece().getType() == Pieces.PAWN) halfmoveClock = 0; else halfmoveClock += 0.5;
         if (turn == Color.BLACK) moveNum++;
@@ -486,6 +485,9 @@ public class Board extends Chess {
         Piece moving = move.getPiece();
         board[move.getFromSquare()] = null;
         board[move.getToSquare()] = moving;
+        System.out.println(move.getEnPassantSquare());
+        System.out.println(move.isEnPassant());
+        if (move.isEnPassant()) board[move.getEnPassantSquare()] = null;
         if (move.getCapture() != null || move.getPiece().getType() == Pieces.PAWN) halfmoveClock = 0; else halfmoveClock += 0.5;
         if (turn == Color.BLACK) moveNum++;
         moving.incrementMoveCount();
@@ -559,7 +561,7 @@ public class Board extends Chess {
                     if (p.getType() == Pieces.PAWN && board[pto-1].getColor() == color) {
                         this.board[pto-1] = null;
                         if (isPinned(pto, color) == null) {
-                            elPassant = new Move(pto-1, pto-Math.floorDiv(pto - pfr, 2), board[pto], p);
+                            elPassant = new Move(pto-1, pto-Math.floorDiv(pto - pfr, 2), board[pto], p, pto);
                         }
                         this.board[pto-1] = p;
 
@@ -570,14 +572,15 @@ public class Board extends Chess {
                     if (p.getType() == Pieces.PAWN && p.getColor() == color) {
                         this.board[pto+1] = null;
                         if (isPinned(pto, color) == null) {
-                            elPassant = new Move(pto+1, pto-Math.floorDiv(pto - pfr, 2), board[pto], p);
+                            elPassant = new Move(pto+1, pto-Math.floorDiv(pto - pfr, 2), board[pto], p, pto);
                         }
                         this.board[pto+1] = p;
                     }
                 } 
             }
         }
-
+        if (elPassant != null)  System.out.println(elPassant.getEnPassantSquare());
+       
         return elPassant;
     }
 

@@ -1,5 +1,4 @@
 package com.chessgame.chess;
-
 public class Chess {
 
     public enum Pieces {
