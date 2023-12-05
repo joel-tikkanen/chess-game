@@ -1,4 +1,5 @@
 package com.chessgame.chess;
+
 public class Piece extends Chess{
 
     private Color color;
@@ -160,6 +161,12 @@ public class Piece extends Chess{
         }
         Piece other = (Piece) obj;
         return this.getType() == other.getType();
+    }
+
+    
+
+    public void setType(Pieces type) {
+        this.type = type;
     }
 
     public String toString(){

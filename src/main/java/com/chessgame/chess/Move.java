@@ -10,15 +10,16 @@ public class Move extends Chess{
     private Piece piece;
 
     private int enPassantSquare = -1;
+    private int castle = -1;
+    private Pieces promotion = null;
 
-    private int castle = 0;
 
-
-    public Move(int fromSquare, int toSquare, Piece capture, Piece piece){
+    public Move(int fromSquare, int toSquare, Piece capture, Piece piece, Pieces promotion){
         initMove(fromSquare, toSquare);
         this.capture = capture;
         this.uci = coords[fromSquare] + coords[toSquare];
         this.piece = piece;
+        this.promotion = promotion;
     }
 
     public Move(int fromSquare, int toSquare, int castle, Piece piece){
@@ -60,15 +61,9 @@ public class Move extends Chess{
         return fromSquare;
     }
 
-
-
-
     public int getToSquare() {
         return toSquare;
     }
-
-
-
 
     public Piece getCapture() {
         return capture;
@@ -101,5 +96,13 @@ public class Move extends Chess{
 
     public String toString(){
         return uci;
+    }
+
+    public Pieces getPromotion() {
+        return promotion;
+    }
+
+    public boolean isPromotion(){
+        return getPromotion() != null;
     }
 }
