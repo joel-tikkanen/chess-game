@@ -16,6 +16,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 public class App extends Application implements IChessUI {
@@ -23,6 +24,10 @@ public class App extends Application implements IChessUI {
     private static Scene scene;
     private GridPane gp;
     private StackPane root;
+    private String statusString = "STATUS HERE: ";
+    private Text statusText = new Text(statusString);
+
+
     private Image[] pieceImages = {
         new Image("https://upload.wikimedia.org/wikipedia/commons/5/5c/Chess_rlt60.png"),
         new Image("https://upload.wikimedia.org/wikipedia/commons/8/81/Chess_bdt60.png"),
@@ -52,6 +57,7 @@ public class App extends Application implements IChessUI {
         stage.setScene(scene);
         this.gp = new GridPane();
         this.controller = new ChessController(this);
+        root.getChildren().add(statusText);
         controller.setBoard();
         stage.show();
     }
@@ -179,5 +185,13 @@ public class App extends Application implements IChessUI {
         button.setOnAction(e -> handleClick(row, col));
         pane.getChildren().add(button);
         gp.add(pane, col, row);
+    }
+
+    public void setStatus(Piece check, boolean checkmate, boolean draw){
+        statusText.setText(statusString);
+        if (check != null)  statusText.setText(String.format("Piece %s %s giving check", check.getColor(), check.getType()));
+        if (checkmate)  statusText.setText(String.format("Checkmate by %s", check.getColor()));
+        if (draw) statusText.setText( "Just a draw.");
+
     }
 }

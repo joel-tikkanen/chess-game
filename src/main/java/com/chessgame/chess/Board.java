@@ -10,8 +10,12 @@ public class Board extends Chess {
     private String fen = STARTING_FEN;
     private Color turn = Color.WHITE;
     private Color notTurn = Color.BLACK;
-    private ArrayList<String> allPositions = new ArrayList<>();
+    private Stack<String> allPositions = new Stack<>();
     private Stack<Move> playedMoves = new Stack<Move>();
+    public int mates = 0;
+    public int checks = 0;
+
+    int kingInCheck = -1;
 
     int[] mailbox = {
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -191,6 +195,8 @@ public class Board extends Chess {
             }
         }
 
+        this.kingInCheck = kingInCheck(this.turn);
+
     }
 
     // Psuedo Legal without castles and en passants
@@ -226,19 +232,26 @@ public class Board extends Chess {
                         // pawn thingy
                         boolean canPromote;
                         // p pushes
-                        int n = mailbox[mailbox64[i] + offset[3]];
+                        int n = mailbox[mailbox64[i] + offset[0]];
+                        System.out.println("n");
+                        System.out.println(n);
                         if (n != -1) {
-                            n = mailbox[mailbox64[i] + offset[0]];
+                           
                             if (board[n] == null) {
                                 canPromote = canPromote(turn, i);
+                                System.out.println("a");
+                                System.out.println(canPromote);
                                 if (canPromote) {
                                     moves.addAll(addPromotions(i, n, p, p));
                                 } else {
                                     moves.add(new Move(i, n, board[n], board[i], null));
                                 }
                                 n = mailbox[mailbox64[i] + offset[3]];
-                                if (board[n] == null && !board[i].getHasMoved())
+                                if (n != -1){
+                                    if (board[n] == null && !board[i].getHasMoved())
                                     moves.add(new Move(i, n, board[n], board[i], null));
+                                }
+                                
                             }
                         }
 
@@ -287,15 +300,13 @@ public class Board extends Chess {
      * @return
      */
     public ArrayList<Move> getLegalMoves() {
-        if (isStalemate || isCheckmate)
-            return new ArrayList<>();
         ArrayList<Move> pseudo = getPseudoLegalMoves();
 
         ArrayList<Move> legalMoves = new ArrayList<>();
         Move[] castling = castlingRights();
         Move enPassant = getEnPassant(turn);
 
-        int kingInCheck = kingInCheck(turn);
+        
         if (kingInCheck == -1) {
             if (castling[0] != null)
                 legalMoves.add(castling[0]);
@@ -306,24 +317,19 @@ public class Board extends Chess {
             legalMoves.add(enPassant);
 
         boolean checkmate = true;
+       
         for (Move move : pseudo) {
 
             if (kingInCheck != -1) {
-
-                if (move.getPiece().getType() != Pieces.KING) {
-
-                    if (board[kingInCheck].getType() == Pieces.KNIGHT && move.getToSquare() == kingInCheck) {
+                if ((doubleCheck(kingInCheck) || move.getPiece().getType() == Pieces.KING)) {
+                    if (isSquareAttacked(move.getToSquare(), notTurn) == -1 && move.getPiece().getType() == Pieces.KING) {
                         legalMoves.add(move);
                         checkmate = false;
-                    } else {
-                        ArrayList<Integer> krc = getRaycast(findKing(turn));
-                        if (krc.contains(move.getToSquare())) {
-                            legalMoves.add(move);
-                            checkmate = false;
-                        }
                     }
-                } else if (isSquareAttacked(move.getToSquare(), notTurn) == -1) {
-                    ;
+                } else if (board[kingInCheck].getType() == Pieces.KNIGHT && move.getToSquare() == kingInCheck) {
+                    legalMoves.add(move);
+                    checkmate = false;
+                } else if (getRaycast(findKing(turn)).contains(move.getToSquare())) {
                     legalMoves.add(move);
                     checkmate = false;
                 }
@@ -334,21 +340,26 @@ public class Board extends Chess {
                 if (move.getPiece().getType() == Pieces.KING) {
                     if (isSquareAttacked(move.getToSquare(), notTurn) == -1) {
                         legalMoves.add(move);
-
                     }
                 } else if (isP == null) {
                     legalMoves.add(move);
                 } else {
                     ArrayList<Integer> ray = getRaycast(move.getFromSquare());
+   
                     if (ray.contains(move.getToSquare()))
                         legalMoves.add(move);
                 }
             }
-            if (checkmate && kingInCheck != -1)
-                isCheckmate = true;
-            if (!checkmate && legalMoves.size() == 0)
-                isStalemate = true;
         }
+        if (checkmate){
+                isCheckmate = true;
+                mates++;
+                return new ArrayList<>();
+        }
+        if (!checkmate && legalMoves.size() == 0 && kingInCheck == -1) {
+            isStalemate = true;
+            return new ArrayList<>();
+        } 
         return legalMoves;
     }
 
@@ -454,7 +465,7 @@ public class Board extends Chess {
 
     public ArrayList<Integer> getRaycast(int square) {
         ArrayList<Integer> raycast = new ArrayList<>();
-        int[] offset = board[square].getOffset();
+        int[] offset = { -11, -10, -9, -1, 1,  9, 10, 11 };
         for (int i = 0; i < offset.length; i++) {
             ArrayList<Integer> r = new ArrayList<>();
             for (int n = square;;) {
@@ -549,8 +560,9 @@ public class Board extends Chess {
         }
 
         board[move.getToSquare()] = moving;
-        if (move.isEnPassant())
+        if (move.isEnPassant()) {
             board[move.getEnPassantSquare()] = null;
+        }
         playedMoves.push(move);
         if (move.getCapture() != null || move.getPiece().getType() == Pieces.PAWN)
             halfmoveClock = 0;
@@ -562,6 +574,13 @@ public class Board extends Chess {
         Color c = notTurn;
         notTurn = turn;
         turn = c;
+        int kic = kingInCheck(turn);
+        if (kic != -1) {
+            checks++;
+            kingInCheck = kic;
+        } else {
+            kingInCheck = -1;
+        }
         setFen(generateFEN());
 
     }
@@ -598,16 +617,39 @@ public class Board extends Chess {
     }
 
     public Move popMove() {
-        Move m = playedMoves.pop();
-        Piece moved = board[m.getToSquare()];
-        board[m.getFromSquare()] = moved;
-        board[m.getToSquare()] = m.getCapture();
-        moved.decrementMoveCount();
+
         Color c = notTurn;
         notTurn = turn;
         turn = c;
-        isCheckmate = false;
-        isStalemate = false;
+        allPositions.pop();
+        Move m = playedMoves.pop();
+
+        Piece moved = board[m.getToSquare()];
+        int castle = m.getCastle();
+
+        if (m.isEnPassant()) {
+            board[m.getEnPassantSquare()] = new Piece(notTurn, Pieces.PAWN, true);
+        }
+
+        board[m.getFromSquare()] = moved;
+        board[m.getToSquare()] = m.getCapture();
+
+        if (castle != -1) {
+            // king side
+            if (castle == 1) {
+                board[m.getFromSquare() + 3] = board[m.getFromSquare() + 1];
+            }
+            // queen side
+            if (castle == 0) {
+                board[m.getFromSquare() - 4] = board[m.getFromSquare() - 1];
+            }
+        }
+        kingInCheck = -1;
+        moved.decrementMoveCount();
+        if (isCheckmate)
+            isCheckmate = false;
+        if (isStalemate)
+            isStalemate = false;
         return m;
 
     }
@@ -644,6 +686,10 @@ public class Board extends Chess {
 
     public Stack<Move> getPlayedMoves() {
         return playedMoves;
+    }
+
+    public int getKingInCheck(){
+        return kingInCheck;
     }
 
     public Move getEnPassant(Color color) {
@@ -762,7 +808,6 @@ public class Board extends Chess {
         char row = coords[square].charAt(1);
 
         if (row == '7' && color == Color.WHITE) {
-            System.out.println(row);
             return true;
         }
         if (row == '2' && color == Color.BLACK)
@@ -777,6 +822,16 @@ public class Board extends Chess {
         promotions.add(new Move(from, to, board[to], piece, Pieces.ROOK));
         promotions.add(new Move(from, to, board[to], piece, Pieces.KNIGHT));
         return promotions;
+    }
+
+
+    private boolean doubleCheck(int attackerSquare){
+        Piece attacker = board[attackerSquare];
+        board[attackerSquare] = null;
+        int a = kingInCheck(turn);
+        board[attackerSquare] = attacker;
+        if (a != -1) return true;
+        return false;
     }
 
     public String toString() {

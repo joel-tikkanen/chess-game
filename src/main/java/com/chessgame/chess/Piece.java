@@ -1,5 +1,4 @@
 package com.chessgame.chess;
-
 public class Piece extends Chess{
 
     private Color color;
@@ -7,12 +6,20 @@ public class Piece extends Chess{
     private int[] offset;
     private boolean isSliding = false;
     private int moveCount = 0;
-    private boolean hasMoved = false;
+    public boolean hasMoved = false;
     
     public Piece(Color color, Pieces type) {
         this.color = color;
         this.type = type;
         setOffset();
+    }
+
+
+    public Piece(Color color, Pieces type, boolean moved) {
+        this.color = color;
+        this.type = type;
+        setOffset();
+        if (moved) incrementMoveCount();
     }
 
     /* for fen parsing */

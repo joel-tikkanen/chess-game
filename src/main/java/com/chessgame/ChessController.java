@@ -31,11 +31,21 @@ public class ChessController implements IControllerBtoV , IControllerVtoB {
     @Override
     public void getLegal() {
         ui.setLegal(board.getLegalMoves());
+        setStatus();
     }
 
     public void setBoard() {
         System.out.println(board);
         ui.updateBoard(board.getBoard());
+    }
+
+    public void setStatus(){
+        Piece check = null;
+        int ci = board.getKingInCheck();
+        if (ci!=-1) check = board.getBoard()[ci];
+        boolean checkmate = board.getIsCheckmate();
+        boolean draw = board.isDraw();
+        ui.setStatus(check, checkmate, draw);
     }
 
 }
