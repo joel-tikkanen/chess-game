@@ -12,7 +12,7 @@ public class ChessController implements IControllerBtoV , IControllerVtoB {
 
     public ChessController(IChessUI ui){
         this.ui = ui;
-        this.board = new Board();
+        this.board = new Board("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
     }
 
     @Override

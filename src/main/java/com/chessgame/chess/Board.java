@@ -1,6 +1,7 @@
 package com.chessgame.chess;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Stack;
 
@@ -12,8 +13,11 @@ public class Board extends Chess {
     private Color notTurn = Color.BLACK;
     private Stack<String> allPositions = new Stack<>();
     private Stack<Move> playedMoves = new Stack<Move>();
+    Stack<Piece[]> boardStates = new Stack<>();
     public int mates = 0;
     public int checks = 0;
+
+    
 
     int kingInCheck = -1;
 
@@ -67,6 +71,8 @@ public class Board extends Chess {
 
     };
 
+    public Piece[] oldBoard = Arrays.copyOfRange(board, 0, 64);
+
     private boolean isCheckmate = false;
     private int moveNum = 1;
 
@@ -76,6 +82,10 @@ public class Board extends Chess {
     // Draw agreement
     private boolean whiteDraw = false;
     private boolean blackDraw = false;
+
+
+
+    private Move lastMove = null;
 
     public Board() {
 
@@ -204,7 +214,7 @@ public class Board extends Chess {
     // https://www.chessprogramming.org/10x12_Board#Offset_Move_Generation
 
     public ArrayList<Move> getPseudoLegalMoves() {
-
+        if (isCheckmate) mates++;
         ArrayList<Move> moves = new ArrayList<Move>();
 
         for (int i = 0; i < 64; i++) {
@@ -233,14 +243,10 @@ public class Board extends Chess {
                         boolean canPromote;
                         // p pushes
                         int n = mailbox[mailbox64[i] + offset[0]];
-                        System.out.println("n");
-                        System.out.println(n);
                         if (n != -1) {
                            
                             if (board[n] == null) {
                                 canPromote = canPromote(turn, i);
-                                System.out.println("a");
-                                System.out.println(canPromote);
                                 if (canPromote) {
                                     moves.addAll(addPromotions(i, n, p, p));
                                 } else {
@@ -353,6 +359,7 @@ public class Board extends Chess {
         }
         if (checkmate){
                 isCheckmate = true;
+                
                 mates++;
                 return new ArrayList<>();
         }
@@ -535,10 +542,18 @@ public class Board extends Chess {
     }
 
     public void makeMove(Move move) {
+
+        this.oldBoard = Arrays.copyOfRange(board, 0, 64);
+
+        Piece[] boardCopy = Arrays.copyOf(board, 64);
+        boardStates.push(boardCopy);
+
+
         Piece moving = board[move.getFromSquare()];
         allPositions.add(fen);
         int castle = move.getCastle();
 
+        
         if (castle != -1) {
             // king side
             if (castle == 1) {
@@ -582,7 +597,8 @@ public class Board extends Chess {
             kingInCheck = -1;
         }
         setFen(generateFEN());
-
+        lastMove = move;
+        
     }
 
     // not up to date
@@ -616,24 +632,43 @@ public class Board extends Chess {
         setFen(generateFEN());
     }
 
-    public Move popMove() {
 
+    public Move newPop(){
+        if (!boardStates.isEmpty()) {
+            Piece[] oldBoardState = boardStates.pop();
+            this.board = Arrays.copyOf(oldBoardState, 64);
+        }
+        allPositions.pop();
+        Move m = playedMoves.pop();
+        lastMove = m;
+       
+        if (m.isEnPassant()) m.getCapture().decrementMoveCount();
+        kingInCheck = -1;
+        m.getPiece().decrementMoveCount();
         Color c = notTurn;
         notTurn = turn;
         turn = c;
+        return m;
+    }
+
+    public Move popMove() {
         allPositions.pop();
         Move m = playedMoves.pop();
-
+        lastMove = m;
         Piece moved = board[m.getToSquare()];
         int castle = m.getCastle();
 
         if (m.isEnPassant()) {
-            board[m.getEnPassantSquare()] = new Piece(notTurn, Pieces.PAWN, true);
+            board[m.getEnPassantSquare()-16] = m.getCapture();
+            m.getCapture().decrementMoveCount();
+            board[m.getToSquare()] = null;
+            board[m.getFromSquare()] = moved;
+        } else {
+            board[m.getToSquare()] = m.getCapture();
         }
-
         board[m.getFromSquare()] = moved;
-        board[m.getToSquare()] = m.getCapture();
 
+       
         if (castle != -1) {
             // king side
             if (castle == 1) {
@@ -644,12 +679,13 @@ public class Board extends Chess {
                 board[m.getFromSquare() - 4] = board[m.getFromSquare() - 1];
             }
         }
+
         kingInCheck = -1;
         moved.decrementMoveCount();
-        if (isCheckmate)
-            isCheckmate = false;
-        if (isStalemate)
-            isStalemate = false;
+        Color c = notTurn;
+        notTurn = turn;
+        turn = c;
+
         return m;
 
     }
@@ -695,12 +731,12 @@ public class Board extends Chess {
     public Move getEnPassant(Color color) {
         Move elPassant = null;
         Move lastMove = getLastMove();
-        if (lastMove == null)
+        if (this.lastMove == null)
             return elPassant;
-        Piece movedPiece = lastMove.getPiece();
-        if (movedPiece.getType() == Pieces.PAWN && movedPiece.getColor() != color) {
-            int pfr = lastMove.getFromSquare();
-            int pto = lastMove.getToSquare();
+        Piece movedPiece = this.lastMove.getPiece();
+        if (movedPiece.getType() == Pieces.PAWN && movedPiece.getColor() != color && !this.lastMove.isEnPassant()) {
+            int pfr = this.lastMove.getFromSquare();
+            int pto = this.lastMove.getToSquare();
             int n1 = mailbox[mailbox64[pto] - 1];
             int n2 = mailbox[mailbox64[pto] + 1];
             if (Math.abs(pto - pfr) == 16 && n1 != -1 && n2 != -1) {
@@ -846,6 +882,10 @@ public class Board extends Chess {
                 boardString += "\n";
         }
         return boardString;
+    }
+
+    public Piece[] getOld(){
+        return oldBoard;
     }
 
 }
