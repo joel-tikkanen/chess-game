@@ -7,6 +7,8 @@ public class Piece extends Chess{
     private boolean isSliding = false;
     private int moveCount = 0;
     public boolean hasMoved = false;
+    public boolean promoted = false;
+
     
     public Piece(Color color, Pieces type) {
         this.color = color;
@@ -48,7 +50,7 @@ public class Piece extends Chess{
         setOffset();
     }
 
-    private void setOffset(){
+    public void setOffset(){
         switch (type) {
             case PAWN:
                 offset = color == Color.WHITE ? new int[]{-10, -11, -9, -20, -19, -21} : new int[]{10, 11, 9, 20, 19, 21};
@@ -73,6 +75,13 @@ public class Piece extends Chess{
                 break;
         }
     }
+
+    
+
+    public void setPromoted(boolean promoted) {
+        this.promoted = promoted;
+    }
+
 
     public Color getColor() {
         return color;
@@ -167,17 +176,30 @@ public class Piece extends Chess{
             return false;
         }
         Piece other = (Piece) obj;
-        return this.getType() == other.getType();
+        System.out.println("l");
+        return this.getType() == other.getType() && this.getMoveCount() == other.getMoveCount() && this.getColor() == other.getColor() && this.isPromoted() == other.isPromoted();
     }
 
     
-
+    
     public void setType(Pieces type) {
         this.type = type;
     }
 
     public String toString(){
         return Character.toString(getSymbol());
+    }
+
+    
+
+
+    public int getMoveCount() {
+        return moveCount;
+    }
+
+
+    public boolean isPromoted() {
+        return promoted;
     }
 
 

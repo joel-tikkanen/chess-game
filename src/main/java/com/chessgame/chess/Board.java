@@ -17,6 +17,8 @@ public class Board extends Chess {
     public int mates = 0;
     public int checks = 0;
 
+    private ArrayList<Integer> solvePin = new ArrayList<>();
+
     
 
     int kingInCheck = -1;
@@ -311,8 +313,6 @@ public class Board extends Chess {
         ArrayList<Move> legalMoves = new ArrayList<>();
         Move[] castling = castlingRights();
         Move enPassant = getEnPassant(turn);
-
-        
         if (kingInCheck == -1) {
             if (castling[0] != null)
                 legalMoves.add(castling[0]);
@@ -350,9 +350,9 @@ public class Board extends Chess {
                 } else if (isP == null) {
                     legalMoves.add(move);
                 } else {
+
                     ArrayList<Integer> ray = getRaycast(move.getFromSquare());
-   
-                    if (ray.contains(move.getToSquare()))
+                    if (solvePin.contains(move.getToSquare()))
                         legalMoves.add(move);
                 }
             }
@@ -374,10 +374,13 @@ public class Board extends Chess {
     // pinned
     // Returns pinning piece
     public Piece isPinned(int square, Color color) {
+        
         int[] dirs = { 1, 9, 10, 11 };
+        ArrayList<Integer> solve;
         int i, j, d1, d2, k;
         Piece d1Piece, d2Piece;
         for (i = 0; i < dirs.length; i++) {
+            solve = new ArrayList<>();
             k = 1;
             d1 = 0;
             d2 = 0;
@@ -386,8 +389,10 @@ public class Board extends Chess {
             while (d1Piece == null || d2Piece == null) {
                 if (d1Piece == null)
                     d1 = mailbox[mailbox64[square] + dirs[i] * k];
+                    if (!isKing(d1)) solve.add(d1);
                 if (d2Piece == null)
                     d2 = mailbox[mailbox64[square] + dirs[i] * -1 * k];
+                    if (!isKing(d2)) solve.add(d2);
                 if (d1 == -1 || d2 == -1)
                     break;
                 if (board[d1] != null)
@@ -399,19 +404,25 @@ public class Board extends Chess {
             if (d1Piece != null && d2Piece != null) {
                 if (isThatPiece(color, Pieces.KING, d1Piece) && d2Piece.isSliding() && d2Piece.getColor() != color) {
                     for (j = 0; j < board[d2].getOffset().length; j++) {
-                        if (d2Piece.getOffset()[j] == dirs[i])
+                        if (d2Piece.getOffset()[j] == dirs[i]){
+                            solvePin = solve;
                             return d2Piece;
+                        }
+                            
                     }
                 }
                 if (isThatPiece(color, Pieces.KING, d2Piece) && d1Piece.isSliding() && d1Piece.getColor() != color) {
                     for (j = 0; j < board[d1].getOffset().length; j++) {
-                        if (d1Piece.getOffset()[j] == dirs[i])
+                        if (d1Piece.getOffset()[j] == dirs[i]) {
+                            solvePin = solve;
                             return d1Piece;
+                        }
                     }
                 }
             }
 
         }
+        this.solvePin = new ArrayList<>();
         return null;
     }
 
@@ -442,7 +453,7 @@ public class Board extends Chess {
                             if (o == dirs[i] * -1)
                                 return s;
                     }
-                    if (!kf)
+                    if (!kf || board[s].getColor() != color)
                         break;
                 }
             }
@@ -502,9 +513,9 @@ public class Board extends Chess {
         Move[] castles = availableCastling(turn);
         int[] qs = { kingPos - 1, kingPos - 2, kingPos - 3 };
         int[] ks = { kingPos + 1, kingPos + 2 };
-        for (Integer square : qs)
-            if (isSquareAttacked(square, notTurn) != -1)
-                castles[0] = null;
+        for (int square = 0; square < qs.length-1; square++) {
+            if (isSquareAttacked(qs[square], notTurn) != -1) castles[0] = null;
+        } 
         for (Integer square : ks)
             if (isSquareAttacked(square, notTurn) != -1)
                 castles[1] = null;
@@ -523,17 +534,26 @@ public class Board extends Chess {
 
         if (isThatPiece(color, Pieces.ROOK, board[pp[0]]) && isThatPiece(color, Pieces.KING, board[pp[1]])) {
             if (!board[pp[0]].getHasMoved() && !board[pp[1]].getHasMoved()) {
+              
                 castles[0] = new Move(pp[1], pp[1] - 2, 0, board[pp[1]]);
             }
         }
 
         if (isThatPiece(color, Pieces.KING, board[pp[1]]) && isThatPiece(color, Pieces.ROOK, board[pp[2]])) {
             if (!board[pp[1]].getHasMoved() && !board[pp[2]].getHasMoved()) {
+               
                 castles[1] = new Move(pp[1], pp[1] + 2, 1, board[pp[1]]);
             }
         }
 
         return castles;
+    }
+
+    // Color is color of the king being pinned
+    public ArrayList<Integer> solvePin(int pinnedSquare, Color color){
+        ArrayList<Integer> solve = new ArrayList<>();
+
+        return solve;
     }
 
     public int kingInCheck(Color color) {
@@ -572,6 +592,8 @@ public class Board extends Chess {
 
         if (move.isPromotion()) {
             moving.setType(move.getPromotion());
+            moving.setOffset();
+            moving.setPromoted(true);
         }
 
         board[move.getToSquare()] = moving;
@@ -603,6 +625,10 @@ public class Board extends Chess {
 
     // not up to date
     public void makeMove(String uci) {
+        this.oldBoard = Arrays.copyOfRange(board, 0, 64);
+        Piece[] boardCopy = Arrays.copyOf(board, 64);
+        boardStates.push(boardCopy);
+       
         int from = 0;
         int to = 0;
         for (int i = 0; i < board.length; i++) {
@@ -613,12 +639,20 @@ public class Board extends Chess {
         }
         allPositions.add(fen);
         Move move = new Move(from, to, board[to], board[from], null);
-        playedMoves.push(move);
-        Piece moving = move.getPiece();
+        Piece moving = board[move.getFromSquare()];
         board[move.getFromSquare()] = null;
+
+        if (move.isPromotion()) {
+            moving.setType(move.getPromotion());
+            moving.setOffset();
+            moving.setPromoted(true);
+        }
+
         board[move.getToSquare()] = moving;
-        if (move.isEnPassant())
+        if (move.isEnPassant()) {
             board[move.getEnPassantSquare()] = null;
+        }
+        playedMoves.push(move);
         if (move.getCapture() != null || move.getPiece().getType() == Pieces.PAWN)
             halfmoveClock = 0;
         else
@@ -629,9 +663,23 @@ public class Board extends Chess {
         Color c = notTurn;
         notTurn = turn;
         turn = c;
+        int kic = kingInCheck(turn);
+        if (kic != -1) {
+            checks++;
+            kingInCheck = kic;
+        } else {
+            kingInCheck = -1;
+        }
         setFen(generateFEN());
+        lastMove = move;
     }
 
+    
+
+
+    public ArrayList<Integer> getSolvePin() {
+        return solvePin;
+    }
 
     public Move newPop(){
         if (!boardStates.isEmpty()) {
@@ -643,11 +691,17 @@ public class Board extends Chess {
         lastMove = m;
        
         if (m.isEnPassant()) m.getCapture().decrementMoveCount();
-        kingInCheck = -1;
+        if (m.isPromotion()) {
+            m.getPiece().setType(Pieces.PAWN);
+            m.getPiece().setOffset();
+            m.getPiece().setPromoted(false);
+        }
+        
         m.getPiece().decrementMoveCount();
         Color c = notTurn;
         notTurn = turn;
         turn = c;
+        kingInCheck = -1;
         return m;
     }
 
@@ -730,7 +784,6 @@ public class Board extends Chess {
 
     public Move getEnPassant(Color color) {
         Move elPassant = null;
-        Move lastMove = getLastMove();
         if (this.lastMove == null)
             return elPassant;
         Piece movedPiece = this.lastMove.getPiece();
@@ -886,6 +939,12 @@ public class Board extends Chess {
 
     public Piece[] getOld(){
         return oldBoard;
+    }
+
+    public boolean isKing(int square){
+        if (square == -1) return false;
+        if (board[square] == null) return false;
+        return board[square].getType() == Pieces.KING;
     }
 
 }

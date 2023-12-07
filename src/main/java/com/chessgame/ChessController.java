@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import com.chessgame.chess.Board;
 import com.chessgame.chess.Move;
 import com.chessgame.chess.Piece;
+import com.chessgame.chess.Chess.Color;
 
 public class ChessController implements IControllerBtoV , IControllerVtoB {
     private IChessUI ui;
@@ -12,7 +13,7 @@ public class ChessController implements IControllerBtoV , IControllerVtoB {
 
     public ChessController(IChessUI ui){
         this.ui = ui;
-        this.board = new Board("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+        this.board = new Board("rnQq1k1r/pp2bppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R b KQ - 0 8");
     }
 
     @Override
@@ -26,6 +27,7 @@ public class ChessController implements IControllerBtoV , IControllerVtoB {
         board.makeMove(m);
         System.out.println(board);
         ui.updateBoard(board.getBoard());
+        System.out.println(board.isSquareAttacked(6, Color.WHITE));
     }
 
     @Override
