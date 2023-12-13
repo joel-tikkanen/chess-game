@@ -1,108 +1,83 @@
 package com.chessgame.chess;
 
-public class Move extends Chess{
+public class Move {
 
     private int fromSquare;
     private int toSquare;
 
-    private Piece capture = null;
+    private Flag flag;
+
     private String uci;
+
     private Piece piece;
 
-    private int enPassantSquare = -1;
-    private int castle = -1;
-    private Pieces promotion = null;
 
-
-    public Move(int fromSquare, int toSquare, Piece capture, Piece piece, Pieces promotion){
-        initMove(fromSquare, toSquare);
-        this.capture = capture;
-        this.uci = coords[fromSquare] + coords[toSquare];
-        this.piece = piece;
-        this.promotion = promotion;
-    }
-
-    public Move(int fromSquare, int toSquare, int castle, Piece piece){
-        initMove(fromSquare, toSquare);
-        this.castle = castle;
-        this.uci = castle == 1 ? "O-O":"O-O-O";
-        this.piece = piece;
-    }
-
-
-    public Move(int fromSquare, int toSquare, Piece capture, Piece piece, int enPassantSquare){
-        initMove(fromSquare, toSquare);
-        this.capture = capture;
-        this.uci = coords[fromSquare] + coords[toSquare];
-        this.piece = piece;
-        this.enPassantSquare = enPassantSquare;
-    }
-
-    private void initMove(int fromSquare, int toSquare){
+    public Move(int fromSquare, int toSquare, Flag flag, Piece piece){
         this.fromSquare = fromSquare;
         this.toSquare = toSquare;
+        this.flag = flag;
+        this.piece = piece;
+        this.uci = Board.coordinates[fromSquare] + Board.coordinates[toSquare] + " " + flag +  " " + piece.getType();
     }
 
-
-    
-    public int getEnPassantSquare() {
-        return enPassantSquare;
-    }
-
-    public void setEnPassantSquare(int enPassantSquare) {
-        this.enPassantSquare = enPassantSquare;
-    }
-
-    public boolean isEnPassant(){
-        return enPassantSquare != -1;
-    }
 
     public int getFromSquare() {
         return fromSquare;
     }
 
+
+    public void setFromSquare(int fromSquare) {
+        this.fromSquare = fromSquare;
+    }
+
+
     public int getToSquare() {
         return toSquare;
     }
 
-    public Piece getCapture() {
-        return capture;
+
+    public void setToSquare(int toSquare) {
+        this.toSquare = toSquare;
     }
 
 
-    public String getUCI(){
-        return uci;
+    public Flag getFlag() {
+        return flag;
     }
+
+
+    public void setFlag(Flag flag) {
+        this.flag = flag;
+    }
+
 
     public String getUci() {
         return uci;
     }
 
-    public Piece getPiece(){
+
+    public void setUci(String uci) {
+        this.uci = uci;
+    }
+
+
+    public Piece getPiece() {
         return piece;
     }
 
-    public int getCastle() {
-        return castle;
-    }
 
-    public String getFromCoordinate(){
-        return coords[fromSquare];
-    }
-
-    public String getToCoordinates(){
-        return coords[toSquare];
+    public void setPiece(Piece piece) {
+        this.piece = piece;
     }
 
     public String toString(){
         return uci;
     }
+    
 
-    public Pieces getPromotion() {
-        return promotion;
-    }
+    
 
-    public boolean isPromotion(){
-        return getPromotion() != null;
-    }
+
+
+
 }

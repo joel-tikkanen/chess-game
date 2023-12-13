@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import com.chessgame.chess.Board;
 import com.chessgame.chess.Move;
 import com.chessgame.chess.Piece;
-import com.chessgame.chess.Chess.Color;
+import com.chessgame.chess.Color;
+
+
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -109,17 +111,18 @@ public class App extends Application implements IChessUI {
     public void setLegal(ArrayList<Move> legalMoves){
         this.legalMoves = legalMoves;
         System.out.println(legalMoves);
+        System.out.println(legalMoves.size());
     }
 
 
     @Override
     public void updateBoard(Piece[] newBoard) {
-        System.out.println();
+   
         int imageIndex, i;
         this.gp = new GridPane();
         gp.setPadding(new Insets(50));
         for (i = 0; i < newBoard.length; i++){
-            if (newBoard[i]!=null){
+            if (newBoard[i].getColor()!=Color.EMPTY){
                 switch (newBoard[i].getType()){
                     case ROOK:
                         imageIndex = newBoard[i].getColor() == Color.WHITE ? 0: 11;
