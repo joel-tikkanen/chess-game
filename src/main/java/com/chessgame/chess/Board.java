@@ -70,6 +70,29 @@ public class Board {
 
     };
 
+    private final Piece[] STARTING_BOARD = {
+        new Piece(Color.BLACK, Pieces.ROOK), new Piece(Color.BLACK, Pieces.KNIGHT),
+        new Piece(Color.BLACK, Pieces.BISHOP), new Piece(Color.BLACK, Pieces.QUEEN),
+        new Piece(Color.BLACK, Pieces.KING), new Piece(Color.BLACK, Pieces.BISHOP),
+        new Piece(Color.BLACK, Pieces.KNIGHT), new Piece(Color.BLACK, Pieces.ROOK),
+        new Piece(Color.BLACK, Pieces.PAWN), new Piece(Color.BLACK, Pieces.PAWN),
+        new Piece(Color.BLACK, Pieces.PAWN), new Piece(Color.BLACK, Pieces.PAWN),
+        new Piece(Color.BLACK, Pieces.PAWN), new Piece(Color.BLACK, Pieces.PAWN),
+        new Piece(Color.BLACK, Pieces.PAWN), new Piece(Color.BLACK, Pieces.PAWN),
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        new Piece(Color.WHITE, Pieces.PAWN), new Piece(Color.WHITE, Pieces.PAWN),
+        new Piece(Color.WHITE, Pieces.PAWN), new Piece(Color.WHITE, Pieces.PAWN),
+        new Piece(Color.WHITE, Pieces.PAWN), new Piece(Color.WHITE, Pieces.PAWN),
+        new Piece(Color.WHITE, Pieces.PAWN), new Piece(Color.WHITE, Pieces.PAWN),
+        new Piece(Color.WHITE, Pieces.ROOK), new Piece(Color.WHITE, Pieces.KNIGHT),
+        new Piece(Color.WHITE, Pieces.BISHOP), new Piece(Color.WHITE, Pieces.QUEEN),
+        new Piece(Color.WHITE, Pieces.KING), new Piece(Color.WHITE, Pieces.BISHOP),
+        new Piece(Color.WHITE, Pieces.KNIGHT), new Piece(Color.WHITE, Pieces.ROOK),
+    };
+
     private final Piece[] EMPTY_BOARD = {
         EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
         EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
@@ -118,11 +141,15 @@ public class Board {
 
     public Board(){
         fen = STARTING_FEN;
+        genLegal();
         allPositions.add(fen);
+       
     }
 
     public Board(String fen){
         setFen(fen);
+        genLegal();
+
         allPositions.add(fen);
     }
 
@@ -203,11 +230,10 @@ public class Board {
     public Move[] castlingRights() {
         int kingPos = turn == Color.WHITE ? 60 : 4;
         Move[] castles = availableCastling(turn);
-
-        if (inCheck(turn)) return castles;
+        if (kingInCheck(turn) != -1) return  new Move[]{null, null};
         int[] qs = { kingPos - 1, kingPos - 2, kingPos - 3 };
         int[] ks = { kingPos + 1, kingPos + 2 };
-        for (int square = 0; square < qs.length; square++) {
+        for (int square = 0; square < qs.length-1; square++) {
             if (isSquareAttacked(qs[square], notTurn) != -1)
                 castles[0] = null;
         }
@@ -255,10 +281,10 @@ public class Board {
         boolean canPromote = canPromote(move.getFromSquare(), move.getPiece().getColor());
         if (validate(move)) {
             if (canPromote) {
-                legalMoves.add(new Move(move.getFromSquare(), move.getToSquare(), Flag.PRQ, move.getPiece()));
-                legalMoves.add(new Move(move.getFromSquare(), move.getToSquare(), Flag.PRB, move.getPiece()));
                 legalMoves.add(new Move(move.getFromSquare(), move.getToSquare(), Flag.PRR, move.getPiece()));
                 legalMoves.add(new Move(move.getFromSquare(), move.getToSquare(), Flag.PRN, move.getPiece()));
+                legalMoves.add(new Move(move.getFromSquare(), move.getToSquare(), Flag.PRQ, move.getPiece()));
+                legalMoves.add(new Move(move.getFromSquare(), move.getToSquare(), Flag.PRB, move.getPiece()));
             } else {
                 legalMoves.add(move);
             }
@@ -273,15 +299,13 @@ public class Board {
                 board[turn == Color.WHITE ? move.getToSquare() + 8  : move.getToSquare() - 8] = EMPTY;
                 break;
             case CQ:
-                // move rook
                 handleCastle(Flag.CQ);
                 break;
             case CK:
-                // move rook
                 handleCastle(Flag.CK);
                 break;
             case PP:
-                // en passant variables
+                
                 if (!test) setEP(move);
                 break;
             case PRB:
@@ -299,8 +323,7 @@ public class Board {
             default:
                 break;
         }
-       
-       
+        
         board[move.getToSquare()] = move.getPiece();
         board[move.getFromSquare()] = EMPTY;
     }
@@ -336,12 +359,8 @@ public class Board {
     }
 
     public void pushMove(Move move){
-       
-        this.oldBoard = Arrays.copyOfRange(board, 0, 64);
-        Piece[] boardCopy = Arrays.copyOf(board, 64);
-        boardStates.push(boardCopy);
+        setOld();
         handleFlag(move, true);
-
     }
 
     public void popMove(){
@@ -352,44 +371,55 @@ public class Board {
 
     public void unmakeMove(){
         // restore board state
-        if (!boardStates.isEmpty()) {
-            Piece[] oldBoardState = boardStates.pop();
-            this.board = Arrays.copyOf(oldBoardState, 64);
+        toOldBoard();
+        Move m = playedMoves.pop();
+        if (m.isPromotion()) {
+            m.getPiece().setType(Pieces.PAWN);
+            m.getPiece().setColor(m.getPiece().getColor());
+            m.getPiece().setAttributes();
         }
-
-        fen = allPositions.pop();
-        // reset promotion
-        // dec mcount
+        m.getPiece().decCount();
+        changeTurn();
+        resetEP();
+        legalMoves = oldLegalMoves;
     }
 
     public void makeMove(Move move){
+        oldLegalMoves = legalMoves;
         // Board states
         resetEP();
-        this.oldBoard = Arrays.copyOfRange(board, 0, 64);
-        Piece[] boardCopy = Arrays.copyOf(board, 64);
-        boardStates.push(boardCopy);
+        setOld();
         Piece moving = move.getPiece();
-
-
-        // Updating the board
         handleFlag(move, false);
-
-
-
-        // inc mcount
+        playedMoves.push(move);
         moving.incCount();
-
-        // Update legal         
         changeTurn();
-      
-
-        // halfclocks, move nums, checks, mates etc
         setClocks(move);
 
- 
+
+        
+        // TODO: 
         // new fen
         //setFen(generateFEN());
         //allPositions.push(fen);
+    }
+
+
+    public void makeMove(String uci, Flag flag){
+        oldLegalMoves = legalMoves;
+        int from = 0, to = 0, i = 0;
+        for (i = 0; i < board.length; i++) {
+            if (coordinates[i].equals(uci.substring(0, 2))) from = i;
+            if (coordinates[i].equals(uci.substring(2, 4))) to = i;
+        }
+        resetEP();
+        setOld();
+        Piece moving = board[from];
+
+        Move move = new Move(from, to, flag, moving);
+        handleFlag(move, false);
+        changeTurn();
+        setClocks(move);
 
     }
 
@@ -438,6 +468,10 @@ public class Board {
         Color c = notTurn;
         notTurn = turn;
         turn = c;
+    }
+
+    public boolean isCheckmate(){
+        return legalMoves.size() == 0 && !draw && playedMoves.size() > 0;
     }
 
 
@@ -516,18 +550,18 @@ public class Board {
     public void setFen(String fen) {
 
         this.fen = fen;
-
-        Piece[] bb = this.board;
+    
 
         String[] splitted = fen.split(" ");
         String board = splitted[0];
         String turn = splitted[1];
-        String enPassant = splitted[3];
+        
         String halfMove = splitted[4];
         String fullMove = splitted[5];
 
         int k = 0;
-        Piece[] a = EMPTY_BOARD;
+        Piece[] a = EMPTY_BOARD.clone();
+        
         for (int i = 0; i < board.length(); i++) {
             char ci = board.charAt(i);
             if ("rnbqkp".indexOf(Character.toLowerCase(ci)) != -1) {
@@ -537,7 +571,9 @@ public class Board {
                 k += ci - '0';
             }
         }
+        
         this.board = a;
+        
 
         this.turn = turn.equals("w") ? Color.WHITE : Color.BLACK;
         this.notTurn = turn.equals("w") ? Color.BLACK : Color.WHITE;
@@ -546,18 +582,12 @@ public class Board {
         fullMoveClock = Integer.parseInt(fullMove);
 
         for (int i = 0; i < this.board.length; i++) {
-            if (bb[i] == EMPTY && this.board[i] != EMPTY) {
+            if (STARTING_BOARD[i] == EMPTY && this.board[i] != EMPTY) {
                 this.board[i].incCount();
-            } else if (bb[i] != EMPTY && this.board[i] != EMPTY) {
-                if (!bb[i].equals(this.board[i]))
-                    this.board[i].incCount();
+            } else if (STARTING_BOARD[i] != EMPTY && this.board[i] != EMPTY) {
+                if (!STARTING_BOARD[i].equals(this.board[i])) this.board[i].incCount();
             }
         }
-
-
-
-       
-
     }
 
     private void resetEP(){
@@ -576,10 +606,6 @@ public class Board {
 
     public Color getNotTurn() {
         return notTurn;
-    }
-
-    public boolean isCheckmate() {
-        return isCheckmate;
     }
 
     public Color isInCheck() {
@@ -615,6 +641,7 @@ public class Board {
     }
 
     public ArrayList<Move> getLegalMoves() {
+        genLegal();
         return legalMoves;
     }
 
@@ -627,35 +654,16 @@ public class Board {
     }
 
     private void setClocks(Move move){
-        if (isCapture(move) || move.getPiece().getType() == Pieces.PAWN)
+        if (move.isCapture() || move.getPiece().getType() == Pieces.PAWN)
             halfmoveClock = 0;
         else
             halfmoveClock += 0.5;
         if (turn == Color.BLACK) fullMoveClock++;
     }
 
-    private boolean isCapture(Move m){
-        switch (m.getFlag()) {
-            case CAPTURE:
-                return true;
-            case PRBC:
-                return true;
-            case PRNC:
-                return true;
-            case PRRC:
-                return true;
-            case PRQC:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-
     private int isSquareAttacked(int square, Color color){
         int[] dirs = { -11, -10, -9, -1, 1, 9, 10, 11 };
         int i, n;
-    
         for (i = 0; i < dirs.length; i++) {
             n = mailbox[mailbox64[square] + dirs[i]];
             if (n == -1) continue;
@@ -744,8 +752,14 @@ public class Board {
     private void toOldBoard(){
         if (!boardStates.isEmpty()) {
             Piece[] oldBoardState = boardStates.pop();
-            this.board = Arrays.copyOf(oldBoardState, 64);
+            board = Arrays.copyOf(oldBoardState, 64);
         }
+    }
+
+    private void setOld(){
+        oldBoard = Arrays.copyOfRange(board, 0, 64);
+        Piece[] boardCopy = Arrays.copyOf(board, 64);
+        boardStates.push(boardCopy);
     }
 
 

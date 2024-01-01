@@ -20,6 +20,38 @@ public class Move {
         this.uci = Board.coordinates[fromSquare] + Board.coordinates[toSquare] + " " + flag +  " " + piece.getType();
     }
 
+    public boolean isCapture(){
+        return flag == Flag.CAPTURE;
+    }
+
+    public boolean isPromotion(){
+        switch (flag) {
+            case PRB:
+                return true;
+            case PRN:
+                return true;
+            case PRR:
+                return true;
+            case PRQ:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public boolean isEnPassant(){
+        return flag == Flag.EP;
+    }
+
+    public boolean isCastleK(){
+        return flag == Flag.CK;
+    }
+
+    public boolean isCasteQ(){
+        return flag == Flag.CQ;
+    }
+
+
 
     public int getFromSquare() {
         return fromSquare;
