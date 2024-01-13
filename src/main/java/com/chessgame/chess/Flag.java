@@ -8,12 +8,12 @@ public enum Flag {
     CQ, // Castle queen side
     CK, // Castle king side
     PRQ, // Promotion to queen
-    PRN, 
+    PRN,
     PRB,
     PRR,
     PRQC,
     PRNC,
     PRBC,
     PRRC,
-    
+
 }
